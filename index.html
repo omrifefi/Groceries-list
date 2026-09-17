@@ -463,11 +463,17 @@ window.clearAllNeeds=function(){
   const updates={};
   state.items.forEach(item=>{
     if(item.need||item.bought){
-      updates[item.id]={...item,need:item.recurring?true:false,bought:false,qty:item.qty};
+      // recurring: clear bought only, keep need=true so they stay on the list
+      // non-recurring: clear both need and bought
+      updates[item.id]={...item,
+        need: item.recurring ? true : false,
+        bought: false
+      };
     }
   });
   if(Object.keys(updates).length) update(dbRef('items'),updates);
-  showToast('✅ הרשימה נוקתה! פריטים קבועים עודכנו.');
+  const keptCount=state.items.filter(i=>i.recurring&&i.need).length;
+  showToast('✅ הרשימה נוקתה!' + (keptCount>0?` ${keptCount} פריטים קבועים נשארו.`:''));
   showNeedOnly=false;
   document.getElementById('filter-btn').classList.add('off');
 };
