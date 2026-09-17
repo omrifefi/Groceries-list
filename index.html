@@ -101,7 +101,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:1
 .item-name.strikethrough{text-decoration:line-through;color:var(--text-sub);}
 .item-sub{font-size:12px;color:var(--text-sub);margin-top:1px;}
 .item-sub.urgent{color:var(--need);font-weight:600;}
-.item-note{font-size:11px;color:var(--accent);margin-top:2px;font-style:italic;}
+.item-note{font-size:11px;color:var(--accent);margin-top:3px;font-style:italic;display:block;}
 .item-recurring{font-size:10px;color:var(--text-sub);margin-top:1px;}
 
 .item-controls{display:flex;align-items:center;gap:4px;flex-shrink:0;}
@@ -602,6 +602,7 @@ function renderItem(item){
       <div class="item-sub ${item.need&&!isBought?'urgent':''}">${item.need&&!isBought?`צריך לקנות: ${item.qty} ${item.unit}`:`${item.qty} ${item.unit}`}</div>
       ${item.note?`<div class="item-note">📝 ${item.note}</div>`:''}
     </div>
+
     <div class="item-controls">
       <div class="qty-group">
         <button class="qty-btn" onclick="changeQty('${item.id}',-1)">−</button>
@@ -634,7 +635,9 @@ window.openEditModal=function(itemId){
   const item=state.items.find(i=>i.id===itemId);if(!item)return;
   editingItemId=itemId;
   document.getElementById('modal-title').textContent='עריכת פריט';
-  document.getElementById('modal-delete-btn').style.display='block';
+  const delBtn=document.getElementById('modal-delete-btn');
+  delBtn.style.display='block';
+  delBtn.dataset.itemId=itemId;
   const catSelect=document.getElementById('modal-cat');
   catSelect.innerHTML=state.categories.map(c=>`<option value="${c.id}" ${c.id===item.catId?'selected':''} >${c.emoji} ${c.name}</option>`).join('')+`<option value="__new__">+ קטגוריה חדשה</option>`;
   document.getElementById('modal-name').value=item.name;
@@ -645,7 +648,8 @@ window.openEditModal=function(itemId){
 };
 
 window.deleteFromModal=function(){
-  if(editingItemId){ deleteItem(editingItemId); closeModal(); }
+  const id=document.getElementById('modal-delete-btn').dataset.itemId;
+  if(id){ deleteItem(id); closeModal(); }
 };
 window.onCatChange=function(){
   document.getElementById('new-cat-field').style.display=
