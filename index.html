@@ -379,9 +379,15 @@ window.joinRoomByCode=async function(code){
     const data=snapshot.val();
     if(data){
       const rawItems=data.items?Object.values(data.items):[];
+      // Deduplicate by id (keepSynced can cause duplicates)
+      const seenIds=new Set();
+      const dedupedItems=rawItems.filter(item=>{
+        if(!item||!item.id||seenIds.has(item.id)) return false;
+        seenIds.add(item.id); return true;
+      });
       // Migration: fill missing fields for old items that pre-date new schema
       const migrateUpdates={};
-      rawItems.forEach(item=>{
+      dedupedItems.forEach(item=>{
         const needsMigration=
           item.note===undefined||
           item.recurring===undefined||
@@ -406,7 +412,7 @@ window.joinRoomByCode=async function(code){
       if(Object.keys(migrateUpdates).length>0){
         update(ref(db,'rooms/'+code+'/items'),migrateUpdates);
       }
-      const newItems=rawItems;
+      const newItems=dedupedItems;
       // Detect additions by others
       if(prevItemIds!==null){
         newItems.forEach(item=>{
