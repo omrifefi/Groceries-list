@@ -376,7 +376,35 @@ window.joinRoomByCode=async function(code){
   unsubscribe=onValue(roomRef,snapshot=>{
     const data=snapshot.val();
     if(data){
-      const newItems=data.items?Object.values(data.items):[];
+      const rawItems=data.items?Object.values(data.items):[];
+      // Migration: fill missing fields for old items that pre-date new schema
+      const migrateUpdates={};
+      rawItems.forEach(item=>{
+        const needsMigration=
+          item.note===undefined||
+          item.recurring===undefined||
+          item.bought===undefined||
+          item.id===undefined;
+        if(needsMigration){
+          const fixed={
+            id:item.id||item.name,
+            catId:item.catId||'cat1',
+            name:item.name||'',
+            unit:item.unit||'יח׳',
+            qty:item.qty||1,
+            need:item.need||false,
+            note:item.note||'',
+            recurring:item.recurring||false,
+            bought:item.bought||false
+          };
+          migrateUpdates[fixed.id]=fixed;
+          Object.assign(item,fixed);
+        }
+      });
+      if(Object.keys(migrateUpdates).length>0){
+        update(ref(db,'rooms/'+code+'/items'),migrateUpdates);
+      }
+      const newItems=rawItems;
       // Detect additions by others
       if(prevItemIds!==null){
         newItems.forEach(item=>{
