@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>רשימת קניות משותפת</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap');
+  :root {
+    --bg: #F7F8FA; --surface: #FFFFFF; --border: #E4E7ED;
+    --text-main: #1A1D23; --text-sub: #7A8099;
+    --accent: #3B6FE8; --accent-light: #EEF3FD;
+    --need: #E84C3B; --need-light: #FEF0EE;
+    --ok: #22C55E; --ok-light: #F0FDF4;
+    --radius: 12px; --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Heebo', sans-serif; background: var(--bg); color: var(--text-main); min-height: 100vh; direction: rtl; }
+
+  /* ── ROOM SCREEN ── */
+  .room-screen {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 24px;
+    background: var(--bg);
+  }
+  .room-logo { font-size: 48px; margin-bottom: 12px; }
+  .room-title { font-size: 26px; font-weight: 700; margin-bottom: 6px; text-align: center; }
+  .room-sub { font-size: 14px; color: var(--text-sub); margin-bottom: 32px; text-align: center; line-height: 1.5; }
+  .room-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 20px;
+    width: 100%;
+    max-width: 380px;
+    margin-bottom: 16px;
+  }
+  .room-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+  .room-input-row { display: flex; gap: 8px; }
+  .room-input {
+    flex: 1;
+    padding: 11px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: 'Heebo', sans-serif;
+    font-size: 15px;
+    direction: ltr;
+    text-transform: lowercase;
+    color: var(--text-main);
+    background: var(--bg);
+  }
+  .room-input:focus { outline: none; border-color: var(--accent); }
+  .room-input::placeholder { color: var(--text-sub); direction: rtl; text-transform: none; }
+  .room-btn {
+    padding: 11px 18px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'Heebo', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .room-btn:active { opacity: 0.85; }
+  .room-hint { font-size: 12px; color: var(--text-sub); margin-top: 10px; line-height: 1.5; }
+  .room-divider { display: flex; align-items: center; gap: 10px; margin: 4px 0; width: 100%; max-width: 380px; }
+  .room-divider::before, .room-divider::after { content:''; flex:1; height:1px; background: var(--border); }
+  .room-divider span { font-size: 12px; color: var(--text-sub); }
+  .saved-rooms { width: 100%; max-width: 380px; margin-top: 4px; }
+  .saved-rooms h4 { font-size: 13px; color: var(--text-sub); font-weight: 500; margin-bottom: 8px; }
+  .saved-room-btn {
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%; padding: 10px 14px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); margin-bottom: 6px;
+    font-family: 'Heebo', sans-serif; font-size: 14px; cursor: pointer;
+    color: var(--text-main);
+  }
+  .saved-room-btn:hover { border-color: var(--accent); }
+  .saved-room-name { font-weight: 600; }
+  .saved-room-code { font-size: 12px; color: var(--text-sub); direction: ltr; }
+
+  /* ── MAIN APP ── */
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 20px; position: sticky; top: 0; z-index: 100; }
+  .header-inner { max-width: 600px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .header-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .back-btn { background: var(--bg); border: 1.5px solid var(--border); border-radius: 20px; padding: 5px 12px; font-family: 'Heebo', sans-serif; font-size: 13px; cursor: pointer; color: var(--text-sub); flex-shrink: 0; }
+  .room-badge { font-size: 13px; font-weight: 600; color: var(--accent); background: var(--accent-light); padding: 4px 10px; border-radius: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; direction: ltr; }
+  .sync-badge { font-size: 12px; color: var(--text-sub); display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); transition: background 0.3s; }
+  .sync-dot.live { background: var(--ok); }
+
+  .main { max-width: 600px; margin: 0 auto; padding: 20px 16px 100px; }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { flex-shrink: 0; padding: 7px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--surface); font-family: 'Heebo', sans-serif; font-size: 14px; font-weight: 500; color: var(--text-sub); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .tab .count { display: inline-block; background: rgba(255,255,255,0.25); border-radius: 10px; padding: 0 6px; font-size: 12px; margin-right: 4px; }
+  .tab:not(.active) .count { background: var(--bg); color: var(--text-sub); }
+
+  .filter-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .filter-label { font-size: 13px; color: var(--text-sub); font-weight: 500; }
+  .toggle-filter { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: var(--need); cursor: pointer; background: var(--need-light); padding: 6px 12px; border-radius: 20px; border: none; font-family: 'Heebo', sans-serif; }
+  .toggle-filter.off { color: var(--text-sub); background: var(--bg); border: 1.5px solid var(--border); }
+
+  .category-section { margin-bottom: 20px; }
+  .category-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--border); border-radius: var(--radius) var(--radius) 0 0; cursor: pointer; user-select: none; }
+  .category-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+  .category-actions { display: flex; align-items: center; gap: 8px; }
+  .need-count { font-size: 12px; background: var(--need); color: #fff; border-radius: 10px; padding: 1px 8px; font-weight: 600; }
+  .chevron { font-size: 11px; color: var(--text-sub); transition: transform 0.2s; }
+  .chevron.open { transform: rotate(180deg); }
+
+  .items-list { background: var(--surface); border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--radius) var(--radius); overflow: hidden; }
+
+  .item-row { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--border); transition: background 0.12s; }
+  .item-row:last-child { border-bottom: none; }
+  .item-row.needs-buy { background: var(--need-light); }
+
+  .need-toggle { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; transition: all 0.15s; background: var(--surface); }
+  .need-toggle.active { border-color: var(--need); background: var(--need); color: #fff; }
+
+  .item-info { flex: 1; min-width: 0; }
+  .item-name { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item-sub { font-size: 12px; color: var(--text-sub); margin-top: 1px; }
+  .item-sub.urgent { color: var(--need); font-weight: 600; }
+
+  .item-controls { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+  .qty-group { display: flex; align-items: center; border: 1.5px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; background: var(--bg); }
+  .qty-btn { width: 30px; height: 32px; border: none; background: transparent; font-size: 18px; color: var(--accent); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; line-height: 1; }
+  .qty-btn:active { background: var(--accent-light); }
+  .qty-input { width: 38px; height: 32px; border: none; border-right: 1px solid var(--border); border-left: 1px solid var(--border); background: transparent; font-family: 'Heebo', sans-serif; font-size: 14px; font-weight: 600; text-align: center; color: var(--text-main); direction: ltr; -moz-appearance: textfield; }
+  .qty-input::-webkit-inner-spin-button, .qty-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+  .qty-input:focus { outline: none; background: var(--accent-light); }
+
+  .unit-select { padding: 4px 4px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: 'Heebo', sans-serif; font-size: 12px; color: var(--text-sub); background: var(--bg); cursor: pointer; max-width: 55px; }
+  .unit-select:focus { outline: none; border-color: var(--accent); }
+
+  .delete-btn { width: 28px; height: 28px; border-radius: 50%; border: none; background: transparent; color: var(--text-sub); cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .delete-btn:hover { background: var(--need-light); color: var(--need); }
+
+  .add-item-row { display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-top: 1px dashed var(--border); background: var(--surface); }
+  .add-item-input { flex: 1; border: none; background: transparent; font-family: 'Heebo', sans-serif; font-size: 14px; color: var(--text-main); direction: rtl; }
+  .add-item-input::placeholder { color: var(--text-sub); }
+  .add-item-input:focus { outline: none; }
+  .add-item-btn { width: 28px; height: 28px; border-radius: 50%; border: none; background: var(--accent); color: #fff; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; line-height: 1; }
+
+  .fab { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #fff; border: none; border-radius: 28px; padding: 14px 24px; font-family: 'Heebo', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 20px rgba(59,111,232,0.35); white-space: nowrap; z-index: 50; }
+  .fab:active { transform: translateX(-50%) scale(0.97); }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; display: flex; align-items: flex-end; justify-content: center; }
+  .modal { background: var(--surface); border-radius: var(--radius) var(--radius) 0 0; padding: 24px 20px 36px; width: 100%; max-width: 600px; direction: rtl; }
+  .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+  .modal-field { margin-bottom: 14px; }
+  .modal-field label { display: block; font-size: 13px; font-weight: 500; color: var(--text-sub); margin-bottom: 6px; }
+  .modal-field input, .modal-field select { width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: 'Heebo', sans-serif; font-size: 15px; color: var(--text-main); background: var(--bg); direction: rtl; }
+  .modal-field input:focus, .modal-field select:focus { outline: none; border-color: var(--accent); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .btn-primary { flex: 1; padding: 13px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-family: 'Heebo', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .btn-secondary { padding: 13px 20px; background: var(--bg); color: var(--text-main); border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: 'Heebo', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; }
+
+  .toast { position: fixed; top: 70px; left: 50%; transform: translateX(-50%) translateY(-10px); background: var(--text-main); color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 14px; font-weight: 500; opacity: 0; transition: all 0.25s; pointer-events: none; white-space: nowrap; z-index: 300; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--text-sub); font-size: 14px; }
+  .empty-state .icon { font-size: 36px; margin-bottom: 8px; }
+
+  .loading { text-align: center; padding: 60px 20px; color: var(--text-sub); font-size: 15px; }
+  .loading .spin { font-size: 32px; display: block; margin-bottom: 12px; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- ROOM SELECTION SCREEN -->
+<div id="room-screen" class="room-screen">
+  <div class="room-logo">🛒</div>
+  <div class="room-title">רשימת קניות משותפת</div>
+  <div class="room-sub">הזן קוד חדר כדי להיכנס לרשימה שלך.<br>כל מי שיש לו את הקוד — רואה ועורך יחד.</div>
+
+  <div class="room-card">
+    <h3>הזן קוד חדר</h3>
+    <div class="room-input-row">
+      <input class="room-input" id="room-code-input" type="text" placeholder="לדוגמה: family123"
+        onkeydown="if(event.key==='Enter') joinRoom()">
+      <button class="room-btn" onclick="joinRoom()">כניסה</button>
+    </div>
+    <div class="room-hint">💡 בחר קוד סודי לרשימה שלך ושל אשתך — שתפו רק ביניכם.<br>למשפחה תנו קוד אחר — הרשימות לא מתערבבות.</div>
+  </div>
+
+  <div class="room-divider"><span>או</span></div>
+
+  <div id="saved-rooms-section" class="saved-rooms" style="display:none">
+    <h4>חדרים שנכנסת אליהם לאחרונה</h4>
+    <div id="saved-rooms-list"></div>
+  </div>
+</div>
+
+<!-- MAIN APP (hidden until room selected) -->
+<div id="app-screen" style="display:none">
+  <header>
+    <div class="header-inner">
+      <div class="header-left">
+        <button class="back-btn" onclick="leaveRoom()">← חדרים</button>
+        <div class="room-badge" id="current-room-badge"></div>
+      </div>
+      <div class="sync-badge">
+        <div class="sync-dot" id="sync-dot"></div>
+        <span id="sync-label">מתחבר...</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="tabs" id="tabs"></div>
+    <div class="filter-bar">
+      <span class="filter-label" id="filter-label">כל הפריטים</span>
+      <button class="toggle-filter off" id="filter-btn" onclick="toggleFilter()">🔴 חסר בבית</button>
+    </div>
+    <div id="list-container"><div class="loading"><span class="spin">⏳</span>טוען רשימה...</div></div>
+  </div>
+
+  <button class="fab" onclick="openAddModal()">+ הוסף פריט / קטגוריה</button>
+</div>
+
+<!-- Add Item Modal -->
+<div class="modal-overlay" id="modal" style="display:none" onclick="closeModal(event)">
+  <div class="modal">
+    <h2>הוסף פריט חדש</h2>
+    <div class="modal-field">
+      <label>קטגוריה</label>
+      <select id="modal-cat" onchange="onCatChange()"></select>
+    </div>
+    <div id="new-cat-field" style="display:none">
+      <div class="modal-field">
+        <label>שם קטגוריה חדשה</label>
+        <input id="modal-new-cat-name" type="text" placeholder="לדוגמה: אורגני...">
+      </div>
+      <div class="modal-field">
+        <label>אמוג׳י</label>
+        <input id="modal-new-cat-emoji" type="text" placeholder="🥦" style="max-width:80px">
+      </div>
+    </div>
+    <div class="modal-field">
+      <label>שם הפריט</label>
+      <input id="modal-name" type="text" placeholder="לדוגמה: חלב, לחם, עגבניות...">
+    </div>
+    <div class="modal-field">
+      <label>יחידת מידה</label>
+      <select id="modal-unit">
+        <option value="יח׳">יחידות (יח׳)</option>
+        <option value="גרם">גרם</option>
+        <option value="ק״ג">קילוגרם</option>
+        <option value="מ״ל">מיליליטר</option>
+        <option value="ליטר">ליטר</option>
+        <option value="קופסה">קופסה</option>
+        <option value="חבילה">חבילה</option>
+        <option value="כוס">כוס</option>
+        <option value="כיכר">כיכר</option>
+        <option value="בקבוק">בקבוק</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="saveModal()">שמור</button>
+      <button class="btn-secondary" onclick="closeModal()">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, onValue, set, update, remove, push, get }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAjAdani2XSSpSYIg7r12YgVjgNKHe1KCo",
+  authDomain: "grocery-list-b6925.firebaseapp.com",
+  databaseURL: "https://grocery-list-b6925-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "grocery-list-b6925",
+  storageBucket: "grocery-list-b6925.firebasestorage.app",
+  messagingSenderId: "41069876879",
+  appId: "1:41069876879:web:7c9834ec315abe5e8a82fa"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// ── STATE ──
+let currentRoom = null;
+let state = { categories: [], items: [], collapsed: {} };
+let activeTab = 'all';
+let showNeedOnly = false;
+let unsubscribe = null;
+
+const DEFAULT_DATA = {
+  categories: [
+    { id: 'cat1', name: 'ירקות ופירות', emoji: '🥦' },
+    { id: 'cat2', name: 'מוצרי חלב',    emoji: '🥛' },
+    { id: 'cat3', name: 'מאפים',         emoji: '🍞' },
+    { id: 'cat4', name: 'בשר ודגים',     emoji: '🥩' },
+    { id: 'cat5', name: 'מזון יבש',      emoji: '🛒' },
+    { id: 'cat6', name: 'ניקיון',        emoji: '🧹' },
+  ],
+  items: [
+    { id:'i1',  catId:'cat1', name:'עגבניות',     unit:'ק״ג',  qty:1,   need:false },
+    { id:'i2',  catId:'cat1', name:'מלפפון',      unit:'ק״ג',  qty:1,   need:false },
+    { id:'i3',  catId:'cat1', name:'בצל',         unit:'ק״ג',  qty:1,   need:false },
+    { id:'i4',  catId:'cat1', name:'תפוחים',      unit:'ק״ג',  qty:1,   need:false },
+    { id:'i5',  catId:'cat1', name:'בננות',       unit:'יח׳',  qty:6,   need:false },
+    { id:'i6',  catId:'cat2', name:'חלב',         unit:'ליטר', qty:2,   need:false },
+    { id:'i7',  catId:'cat2', name:'גבינה צהובה', unit:'גרם',  qty:200, need:false },
+    { id:'i8',  catId:'cat2', name:'יוגורט',      unit:'יח׳',  qty:4,   need:false },
+    { id:'i9',  catId:'cat2', name:'חמאה',        unit:'גרם',  qty:100, need:false },
+    { id:'i10', catId:'cat3', name:'לחם',         unit:'כיכר', qty:1,   need:false },
+    { id:'i11', catId:'cat4', name:'עוף',         unit:'ק״ג',  qty:1,   need:false },
+    { id:'i12', catId:'cat4', name:'בשר טחון',    unit:'גרם',  qty:500, need:false },
+    { id:'i13', catId:'cat5', name:'פסטה',        unit:'חבילה',qty:2,   need:false },
+    { id:'i14', catId:'cat5', name:'אורז',        unit:'ק״ג',  qty:1,   need:false },
+    { id:'i15', catId:'cat5', name:'שמן זית',     unit:'בקבוק',qty:1,   need:false },
+    { id:'i16', catId:'cat6', name:'נוזל כלים',   unit:'יח׳',  qty:1,   need:false },
+    { id:'i17', catId:'cat6', name:'נייר טואלט',  unit:'חבילה',qty:1,   need:false },
+  ],
+  collapsed: {}
+};
+
+// ── SAVED ROOMS (localStorage) ──
+function getSavedRooms() {
+  try { return JSON.parse(localStorage.getItem('saved_rooms') || '[]'); } catch { return []; }
+}
+function saveRoom(code) {
+  let rooms = getSavedRooms().filter(r => r.code !== code);
+  rooms.unshift({ code, ts: Date.now() });
+  rooms = rooms.slice(0, 5);
+  localStorage.setItem('saved_rooms', JSON.stringify(rooms));
+}
+function renderSavedRooms() {
+  const rooms = getSavedRooms();
+  const section = document.getElementById('saved-rooms-section');
+  const list = document.getElementById('saved-rooms-list');
+  if (!rooms.length) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  list.innerHTML = rooms.map(r => `
+    <button class="saved-room-btn" onclick="window.joinRoomByCode('${r.code}')">
+      <span class="saved-room-name">🏠 ${r.code}</span>
+      <span class="saved-room-code">כניסה ←</span>
+    </button>`).join('');
+}
+
+// ── ROOM JOIN ──
+window.joinRoom = function() {
+  const code = document.getElementById('room-code-input').value.trim().toLowerCase().replace(/\s+/g,'-');
+  if (!code) { showToast('⚠️ נא להזין קוד חדר'); return; }
+  window.joinRoomByCode(code);
+};
+
+window.joinRoomByCode = async function(code) {
+  currentRoom = code;
+  saveRoom(code);
+  document.getElementById('room-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'block';
+  document.getElementById('current-room-badge').textContent = '🏠 ' + code;
+  setSyncStatus('connecting');
+
+  // Check if room exists, if not seed with defaults
+  const roomRef = ref(db, 'rooms/' + code);
+  const snap = await get(roomRef);
+  if (!snap.exists()) {
+    await set(roomRef, DEFAULT_DATA);
+  }
+
+  // Live listener
+  if (unsubscribe) unsubscribe();
+  unsubscribe = onValue(roomRef, snapshot => {
+    const data = snapshot.val();
+    if (data) {
+      state = {
+        categories: data.categories ? Object.values(data.categories) : [],
+        items: data.items ? Object.values(data.items) : [],
+        collapsed: data.collapsed || {}
+      };
+      render();
+      setSyncStatus('live');
+    }
+  }, () => setSyncStatus('error'));
+};
+
+window.leaveRoom = function() {
+  if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+  currentRoom = null;
+  activeTab = 'all';
+  showNeedOnly = false;
+  document.getElementById('app-screen').style.display = 'none';
+  document.getElementById('room-screen').style.display = 'flex';
+  document.getElementById('room-code-input').value = '';
+  renderSavedRooms();
+};
+
+function setSyncStatus(s) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  if (s === 'live')        { dot.className = 'sync-dot live'; lbl.textContent = 'מסונכרן'; }
+  else if (s === 'connecting') { dot.className = 'sync-dot'; lbl.textContent = 'מתחבר...'; }
+  else                     { dot.className = 'sync-dot'; lbl.style.color='var(--need)'; lbl.textContent = 'שגיאה'; }
+}
+
+// ── FIREBASE WRITES ──
+function dbRef(path) { return ref(db, 'rooms/' + currentRoom + '/' + path); }
+
+function uid() { return 'id_' + Math.random().toString(36).slice(2,9); }
+
+window.toggleCollapse = function(catId) {
+  const val = !state.collapsed[catId];
+  update(dbRef('collapsed'), { [catId]: val });
+};
+
+window.toggleNeed = function(itemId) {
+  const item = state.items.find(i => i.id === itemId);
+  if (!item) return;
+  const newVal = !item.need;
+  update(dbRef('items'), { [itemId]: { ...item, need: newVal } });
+  showToast(newVal ? `🛒 ${item.name} — צריך לקנות` : `✅ ${item.name} — הוסר מהחסרים`);
+};
+
+window.changeQty = function(itemId, delta) {
+  const item = state.items.find(i => i.id === itemId);
+  if (!item) return;
+  const step = ['גרם','מ״ל'].includes(item.unit) ? 50 : 1;
+  const newQty = Math.max(0, parseFloat(item.qty) + delta * step);
+  update(dbRef('items'), { [itemId]: { ...item, qty: parseFloat(newQty.toFixed(2)) } });
+};
+
+window.setQty = function(itemId, val) {
+  const item = state.items.find(i => i.id === itemId);
+  const parsed = parseFloat(val);
+  if (item && !isNaN(parsed) && parsed >= 0) {
+    update(dbRef('items'), { [itemId]: { ...item, qty: parsed } });
+  }
+};
+
+window.updateUnit = function(itemId, val) {
+  const item = state.items.find(i => i.id === itemId);
+  if (item) update(dbRef('items'), { [itemId]: { ...item, unit: val } });
+};
+
+window.deleteItem = function(itemId) {
+  const item = state.items.find(i => i.id === itemId);
+  remove(dbRef('items/' + itemId));
+  if (item) showToast(`🗑️ ${item.name} נמחק`);
+};
+
+window.addItemInline = function(catId, inputEl) {
+  const name = inputEl.value.trim();
+  if (!name) return;
+  const id = uid();
+  update(dbRef('items'), { [id]: { id, catId, name, unit: 'יח׳', qty: 1, need: false } });
+  inputEl.value = '';
+  showToast(`➕ ${name} נוסף`);
+};
+
+// ── RENDER ──
+function render() { renderTabs(); renderList(); }
+
+function renderTabs() {
+  const container = document.getElementById('tabs');
+  const needAll = state.items.filter(i => i.need).length;
+  let html = `<button class="tab ${activeTab==='all'?'active':''}" onclick="setTab('all')">הכול <span class="count">${needAll>0?needAll:state.items.length}</span></button>`;
+  state.categories.forEach(cat => {
+    const catItems = state.items.filter(i => i.catId === cat.id);
+    const needCount = catItems.filter(i => i.need).length;
+    const display = needCount > 0 ? needCount : catItems.length;
+    html += `<button class="tab ${activeTab===cat.id?'active':''}" onclick="setTab('${cat.id}')">${cat.emoji} ${cat.name} <span class="count">${display}</span></button>`;
+  });
+  container.innerHTML = html;
+}
+
+window.setTab = function(id) { activeTab = id; renderTabs(); renderList(); };
+
+window.toggleFilter = function() {
+  showNeedOnly = !showNeedOnly;
+  document.getElementById('filter-btn').classList.toggle('off', !showNeedOnly);
+  document.getElementById('filter-label').textContent = showNeedOnly ? 'חסר בבית בלבד' : 'כל הפריטים';
+  renderList();
+};
+
+const ALL_UNITS = ['יח׳','גרם','ק״ג','מ״ל','ליטר','קופסה','חבילה','כוס','כיכר','בקבוק'];
+
+function renderList() {
+  const container = document.getElementById('list-container');
+  const cats = activeTab === 'all' ? state.categories : state.categories.filter(c => c.id === activeTab);
+  let html = ''; let anyVisible = false;
+
+  cats.forEach(cat => {
+    let items = state.items.filter(i => i.catId === cat.id);
+    if (showNeedOnly) items = items.filter(i => i.need);
+    if (showNeedOnly && items.length === 0) return;
+    anyVisible = true;
+
+    const needCount = state.items.filter(i => i.catId === cat.id && i.need).length;
+    const isCollapsed = state.collapsed[cat.id];
+
+    html += `<div class="category-section">
+      <div class="category-header" onclick="toggleCollapse('${cat.id}')">
+        <div class="category-title"><span>${cat.emoji}</span>${cat.name}</div>
+        <div class="category-actions">
+          ${needCount > 0 ? `<span class="need-count">${needCount} חסר</span>` : ''}
+          <span class="chevron ${isCollapsed ? '' : 'open'}">▼</span>
+        </div>
+      </div>`;
+
+    if (!isCollapsed) {
+      html += `<div class="items-list">`;
+      items.forEach(item => {
+        const unitOpts = ALL_UNITS.map(u => `<option value="${u}" ${u===item.unit?'selected':''}>${u}</option>`).join('');
+        html += `<div class="item-row ${item.need ? 'needs-buy' : ''}">
+          <div class="need-toggle ${item.need?'active':''}" onclick="toggleNeed('${item.id}')">${item.need?'!':''}</div>
+          <div class="item-info">
+            <div class="item-name">${item.name}</div>
+            <div class="item-sub ${item.need?'urgent':''}">${item.need?`צריך לקנות: ${item.qty} ${item.unit}`:`${item.qty} ${item.unit}`}</div>
+          </div>
+          <div class="item-controls">
+            <div class="qty-group">
+              <button class="qty-btn" onclick="changeQty('${item.id}',-1)">−</button>
+              <input class="qty-input" type="number" value="${item.qty}" min="0"
+                onchange="setQty('${item.id}',this.value)" onfocus="this.select()">
+              <button class="qty-btn" onclick="changeQty('${item.id}',1)">+</button>
+            </div>
+            <select class="unit-select" onchange="updateUnit('${item.id}',this.value)">${unitOpts}</select>
+            <button class="delete-btn" onclick="deleteItem('${item.id}')">×</button>
+          </div>
+        </div>`;
+      });
+      if (!showNeedOnly) {
+        html += `<div class="add-item-row">
+          <input class="add-item-input" type="text" placeholder="+ הוסף פריט..." id="add_${cat.id}"
+            onkeydown="if(event.key==='Enter') addItemInline('${cat.id}',this)">
+          <button class="add-item-btn" onclick="addItemInline('${cat.id}',document.getElementById('add_${cat.id}'))">+</button>
+        </div>`;
+      }
+      html += `</div>`;
+    }
+    html += `</div>`;
+  });
+
+  if (!anyVisible) {
+    html = `<div class="empty-state"><div class="icon">${showNeedOnly?'🎉':'📝'}</div>${showNeedOnly?'אין פריטים חסרים כרגע!':'אין פריטים. לחץ + להוסיף'}</div>`;
+  }
+  container.innerHTML = html;
+}
+
+// ── MODAL ──
+window.openAddModal = function() {
+  const catSelect = document.getElementById('modal-cat');
+  catSelect.innerHTML = state.categories.map(c => `<option value="${c.id}">${c.emoji} ${c.name}</option>`).join('') + `<option value="__new__">+ קטגוריה חדשה</option>`;
+  document.getElementById('modal-name').value = '';
+  document.getElementById('modal-new-cat-name').value = '';
+  document.getElementById('modal-new-cat-emoji').value = '';
+  document.getElementById('new-cat-field').style.display = 'none';
+  document.getElementById('modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('modal-name').focus(), 120);
+};
+
+window.onCatChange = function() {
+  document.getElementById('new-cat-field').style.display =
+    document.getElementById('modal-cat').value === '__new__' ? 'block' : 'none';
+};
+
+window.closeModal = function(e) {
+  if (!e || e.target.id === 'modal') document.getElementById('modal').style.display = 'none';
+};
+
+window.saveModal = function() {
+  const name = document.getElementById('modal-name').value.trim();
+  if (!name) { showToast('⚠️ נא להזין שם פריט'); return; }
+  let catId = document.getElementById('modal-cat').value;
+  if (catId === '__new__') {
+    const catName = document.getElementById('modal-new-cat-name').value.trim();
+    const catEmoji = document.getElementById('modal-new-cat-emoji').value.trim() || '📦';
+    if (!catName) { showToast('⚠️ נא להזין שם קטגוריה'); return; }
+    catId = uid();
+    update(dbRef('categories'), { [catId]: { id: catId, name: catName, emoji: catEmoji } });
+  }
+  const unit = document.getElementById('modal-unit').value;
+  const id = uid();
+  update(dbRef('items'), { [id]: { id, catId, name, unit, qty: 1, need: false } });
+  document.getElementById('modal').style.display = 'none';
+  showToast(`✅ ${name} נוסף לרשימה`);
+};
+
+// ── TOAST ──
+window.showToast = function(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+};
+
+// ── INIT ──
+renderSavedRooms();
+</script>
+</body>
+</html>
