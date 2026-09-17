@@ -287,7 +287,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:1
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, onValue, set, update, remove, get }
+import { getDatabase, ref, onValue, set, update, remove, get, keepSynced }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
@@ -370,6 +370,8 @@ window.joinRoomByCode=async function(code){
   document.getElementById('current-room-badge').textContent='🏠 '+code;
   setSyncStatus('connecting');
   const roomRef=ref(db,'rooms/'+code);
+  // Keep this room's data synced locally for offline use
+  try { keepSynced(roomRef, true); } catch(e) {}
   const snap=await get(roomRef);
   if(!snap.exists()) await set(roomRef,DEFAULT_DATA);
   if(unsubscribe) unsubscribe();
@@ -434,10 +436,22 @@ window.leaveRoom=function(){
 function setSyncStatus(s){
   const dot=document.getElementById('sync-dot');
   const lbl=document.getElementById('sync-label');
-  if(s==='live'){dot.className='sync-dot live';lbl.textContent='מסונכרן';}
-  else if(s==='connecting'){dot.className='sync-dot';lbl.textContent='מתחבר...';}
-  else{dot.className='sync-dot';lbl.textContent='שגיאה';}
+  if(!navigator.onLine){
+    dot.className='sync-dot';dot.style.background='var(--need)';
+    lbl.textContent='אופליין — נתונים שמורים';lbl.style.color='var(--need)';
+  } else if(s==='live'){
+    dot.className='sync-dot live';dot.style.background='';
+    lbl.textContent='מסונכרן';lbl.style.color='';
+  } else if(s==='connecting'){
+    dot.className='sync-dot';dot.style.background='';
+    lbl.textContent='מתחבר...';lbl.style.color='';
+  } else {
+    dot.className='sync-dot';dot.style.background='';
+    lbl.textContent='שגיאה';lbl.style.color='';
+  }
 }
+window.addEventListener('online', ()=>setSyncStatus('live'));
+window.addEventListener('offline',()=>setSyncStatus('offline'));
 
 // ── FIREBASE WRITES ──
 function dbRef(path){return ref(db,'rooms/'+currentRoom+'/'+path);}
@@ -729,6 +743,11 @@ function showLiveBanner(msg){
 }
 
 renderSavedRooms();
+
+// Register Service Worker for full offline support
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
 </script>
 </body>
 </html>
